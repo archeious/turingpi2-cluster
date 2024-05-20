@@ -1,0 +1,48 @@
+---
+- hosts: compute
+  become: yes
+
+  pre_tasks:
+    - name: Update apt cache if needed.
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+  tasks:
+  # User Based Settings
+    - name: Make users passwordless for sudo in group wheel
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: '^%sudo'
+        line: '%sudo ALL=(ALL) NOPASSWD: ALL'
+        validate: 'visudo -cf %s'
+
+    - name: Ensure 'jeff' has an account and that it is in the 'admin' and 'sudo' group
+      ansible.builtin.user:
+        name: jeff
+        groups: admin, sudo
+        skeleton: /etc/skel
+        shell: /bin/bash
+
+    - name: Ensure 'jeff'\'s authroized keys are updated
+      ansible.posix.authorized_key:
+        user: jeff
+        state: present
+        key: "{{ lookup('file', 'config/jeff.id_rsa.pub') }}"
+
+  # Time Base Settings
+    - name: Update Timezone to Etc/UTC
+      copy: content="Etc/UTC\n" dest=/etc/timezone owner=root group=root mode=0644
+      register: timezone
+
+    - name: Reconfigure Timezone Data (if changed)
+      shell: dpkg-reconfigure -f noninteractive tzdata
+      when: timezone.changed
+
+    - name: Ensure Chrony (NTP) is installed
+      package: name=chrony state=present
+
+    - name: Ensure Chrony is running
+      service : name=chrony state=started enabled=yes
+

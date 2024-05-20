@@ -1,0 +1,8 @@
+compute:
+  hosts:
+    tpi2-rk1-1-1.localdomain:
+    tpi2-rk1-1-2.localdomain:
+    tpi2-rk1-1-3.localdomain:
+    tpi2-rk1-1-4.localdomain:
+  vars:
+    ansible_user: ubuntu
